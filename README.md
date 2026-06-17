@@ -136,3 +136,27 @@ making the system suitable for both everyday users and IoT-enabled smart bottle 
 * ESP8266 / ESP32
 * HX711 Load Cell Amplifier
 * Load Cell Sensor
+
+---
+
+## Academic Integrity Notice
+
+This project was developed as part of academic learning and portfolio development.
+
+Students may view this project for learning and reference purposes; however, submitting this work, in whole or in part, as one's own academic work without proper attribution may constitute academic misconduct.
+
+Please use the project responsibly and provide appropriate credit where applicable.
+
+---
+
+## Copyright Notice
+
+© 2026 Sri Akshaya S.
+
+HydroSync is an academic and personal development project created and implemented by Sri Akshaya S.
+
+While the project incorporates publicly available technologies, APIs, frameworks, and AI-assisted development tools, the source code organization, implementation, integration, user interface design, documentation, and project-specific features represent the author's original work.
+
+Unauthorized copying, submission, redistribution, or representation of this implementation as another person's original work is prohibited.
+
+This repository is intended for demonstration, learning, portfolio, and evaluation purposes only.
