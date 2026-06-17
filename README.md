@@ -1,118 +1,138 @@
-# 💧 HydroSync — Smart Water Bottle v2.0
+# 💧 HydroSync — AI-Powered Smart Hydration Tracking System
 
-AI-powered hydration tracking with live weather, activity intelligence, BMI-based goals, and a full notification system.
+🌐 **Live Application:** https://hydrosync.onrender.com
 
----
+HydroSync is a full-stack smart hydration management platform that helps users maintain healthy water intake through personalized hydration goals, real-time tracking, weather-aware recommendations, activity monitoring, and AI-powered assistance.
 
-## Features
+The system combines **IoT hardware, cloud services, weather intelligence, health analytics, and AI** to create a smart hydration experience tailored to each user.
 
-| Feature | Details |
-|---|---|
-| **Smart Goal** | Calculated daily from weight, BMI, activity level, health conditions + live OpenWeather temp |
-| **Sensor Integration** | Arduino HX711 → WiFi POST every 10s → auto-tracks consumption |
-| **Activity Logging** | Log exercise type/intensity/duration → goal auto-increases + push notification |
-| **Notifications Page** | All alerts stored: reminders, milestones (25/50/75/100%), streaks, weather, activity |
-| **Streak Tracking** | Daily streak resets at midnight via cron job |
-| **Goal Breakdown** | Transparent display of how your goal was calculated |
-| **Weather Integration** | OpenWeatherMap API adjusts goal based on real-time temp + humidity |
-| **Health Conditions** | Kidney stones, diabetes, UTI, pregnancy etc. bump goal accordingly |
+## Key Highlights
 
----
+### 🧠 Intelligent Hydration Goals
 
-## Setup
+HydroSync calculates a personalized daily water intake goal based on:
 
-### 1. Install dependencies
-```bash
-npm install
-```
+* Weight and BMI
+* Activity level
+* Gender
+* Health conditions
+* Local weather conditions
+* Exercise intensity and duration
+* Google Fit activity data (for Personalization)
 
-### 2. Configure environment
-```bash
-cp .env.example .env
-# Edit .env:
-#   MONGO_URI=mongodb://localhost:27017/smartbottle
-#   JWT_SECRET=any_random_string
-#   WEATHER_API_KEY=b382c18c13081f0c88cb40b169b31101
-#   DEFAULT_CITY=Chennai
-```
+Users can view a detailed goal breakdown to understand exactly how their hydration target is calculated.
 
-### 3. Start the server
-```bash
-npm run dev   # development with nodemon
-npm start     # production
-```
+### 🌤️ Weather-Aware Recommendations
 
-### 4. Open the frontend
-Open `frontend/index.html` in your browser, or serve via:
-```bash
-# From project root:
-node -e "require('http').createServer(require('fs').readFileSync.bind(null)).listen(3000)"
-```
+The application integrates with real-time weather services to dynamically adjust hydration goals based on:
 
----
+* Temperature
+* Humidity
+* Environmental conditions
 
-## Arduino Setup
+Hotter weather automatically increases hydration recommendations to help prevent dehydration.
 
-1. Open `arduino/smart_bottle/smart_bottle.ino` in Arduino IDE
-2. Install libraries: **HX711 by bogde**, **ESP8266WiFi**, **ArduinoJson**
-3. Set your WiFi credentials, server IP, and MongoDB user ID
-4. Run calibration (see comments at bottom of sketch)
-5. Upload to ESP8266/ESP32
+### 🏃 Activity-Based Goal Adjustment
 
-### Calibration steps
-1. Empty the scale, power on → scale auto-tares
-2. Place a known weight (e.g. 500g)
-3. Read the raw value from Serial Monitor
-4. `CALIBRATION_FACTOR = rawValue / knownGrams`
-5. Weigh empty bottle → set `EMPTY_BOTTLE_GRAMS`
-6. Fill with exactly 1000ml → set `FULL_BOTTLE_GRAMS`
+Users can log physical activities such as:
 
----
+* Walking
+* Running
+* Cycling
+* Gym workouts
+* Sports activities
 
-## API Reference
+HydroSync automatically increases daily hydration goals based on activity intensity and duration.
 
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/auth/register` | POST | No | Register + calculate initial goal |
-| `/api/auth/login` | POST | No | Login |
-| `/api/auth/me` | GET | JWT | Get current user |
-| `/api/auth/profile` | PUT | JWT | Update profile + recalculate goal |
-| `/api/hydration/sensor` | POST | No | Arduino sensor reading |
-| `/api/hydration/log` | POST | JWT | Manual water log |
-| `/api/hydration/activity` | POST | JWT | Log exercise → bump goal |
-| `/api/hydration/today` | GET | JWT | Today's summary + weather |
-| `/api/hydration/history` | GET | JWT | Historical logs |
-| `/api/hydration/recalculate` | POST | JWT | Force goal recalculation |
-| `/api/hydration/calibrate` | POST | JWT | Set bottle calibration data |
-| `/api/notifications` | GET | JWT | List notifications |
-| `/api/notifications/:id/read` | PUT | JWT | Mark single as read |
-| `/api/notifications/read-all` | PUT | JWT | Mark all as read |
-| `/api/notifications/:id` | DELETE | JWT | Delete notification |
-| `/api/notifications/clear-all` | DELETE | JWT | Clear all |
+### 🤖 AI Hydration Assistant
+
+An integrated AI assistant provides:
+
+* Hydration guidance
+* Water intake recommendations
+* Goal explanations
+* Personalized hydration insights
+
+### 🔔 Smart Notification System
+
+The application continuously tracks hydration progress and generates notifications for:
+
+* Water intake reminders
+* Goal milestones (25%, 50%, 75%, 100%)
+* Daily streak achievements
+* Weather-based alerts
+* Activity-based hydration recommendations
+
+### 📈 Progress & Streak Tracking
+
+Users can monitor:
+
+* Daily water consumption
+* Hydration history
+* Achievement streaks
+* Goal completion percentages
+* Historical intake trends
 
 ---
 
-## Goal Calculation Formula
+## 🍼 Smart Bottle Integration (IoT Mode)
 
-```
-base = weight_kg × 35ml
-if BMI > 30  → +500ml
-if BMI > 25  → +250ml
-base × activityMultiplier (1.0–1.5)
-if female    → ×0.9
-if pregnant  → +300ml
-if breastfeeding → +700ml
-if kidneyStones  → +500ml
-if UTI           → +300ml
-if diabetes      → +200ml
-weather (temp 25–40°C) → +100–600ml
-humidity > 80%   → +150ml
-cap: 1500ml – 5000ml
-```
+HydroSync supports integration with a physical smart water bottle using an **ESP8266/ESP32 microcontroller** and **HX711 load cell sensor**.
+
+### How It Works
+
+1. A load cell continuously measures the bottle's weight.
+2. The HX711 module converts sensor readings into digital values.
+3. The ESP8266/ESP32 sends readings to HydroSync every few seconds through Wi-Fi.
+4. HydroSync calculates water consumption automatically.
+5. The dashboard updates in real time without requiring manual input.
+
+### Sensor Status Indicator
+
+The dashboard includes a dedicated **Bottle Monitoring Section** that displays:
+
+* Current bottle water level
+* Sensor connection status
+* Remaining water in the bottle
+* Real-time consumption updates
+
+When no physical sensor is connected, users can still use HydroSync normally by manually logging water intake.
+
+This allows the platform to operate in both:
+
+* **Software-Only Mode** (manual tracking)
+* **Smart Bottle Mode** (automatic sensor-based tracking)
+
+making the system suitable for both everyday users and IoT-enabled smart bottle deployments.
 
 ---
 
-## Cron Jobs
+## Technology Stack
 
-- **Midnight**: Reset `todayConsumed`, update streak, recalculate goal from weather
-- **Every hour (7AM–10PM)**: Send hydration reminder if goal < 100%
+**Frontend**
+
+* HTML
+* CSS
+* JavaScript
+
+**Backend**
+
+* Node.js
+* Express.js
+
+**Database**
+
+* MongoDB Atlas
+
+**Cloud & APIs**
+
+* Render
+* OpenWeather API
+* Google Fit API
+* Anthropic AI API
+
+**IoT Hardware**
+
+* ESP8266 / ESP32
+* HX711 Load Cell Amplifier
+* Load Cell Sensor
