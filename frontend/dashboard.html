@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HydroSync — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --ocean: #080f1a; --deep: #0d1b2a; --panel: #0f2035;
+  --water: #00b4d8; --wave: #90e0ef; --foam: #caf0f8;
+  --accent: #48cae4; --gold: #f4d35e; --danger: #ef476f;
+  --success: #06d6a0; --warn: #ffd166;
+  --text: #e2f4ff; --muted: #5b8fa8; --border: rgba(0,180,216,0.15);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: var(--ocean); color: var(--text); min-height: 100vh; display: flex; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 240px; min-height: 100vh; background: var(--deep);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; z-index: 100; transition: transform 0.3s;
+}
+.sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-logo h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; color: #fff; }
+.sidebar-logo span { font-size: 0.78rem; color: var(--muted); }
+.nav { padding: 16px 12px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 10px; cursor: pointer;
+  color: var(--muted); font-size: 0.9rem; font-weight: 500;
+  transition: all 0.2s; margin-bottom: 4px; border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: rgba(0,180,216,0.08); color: var(--text); }
+.nav-item.active { background: rgba(0,180,216,0.15); color: var(--water); }
+.nav-item .badge {
+  margin-left: auto; background: var(--danger); color: #fff;
+  border-radius: 999px; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; min-width: 20px; text-align: center;
+}
+.nav-icon { font-size: 1.1rem; width: 20px; text-align: center; }
+.sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+.user-chip { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; }
+.user-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--water), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: #fff; }
+.user-info small { color: var(--muted); font-size: 0.75rem; display: block; }
+.logout-btn { display: flex; align-items: center; gap: 8px; padding: 10px 14px; color: var(--muted); cursor: pointer; border-radius: 8px; font-size: 0.85rem; background: none; border: none; width: 100%; transition: color 0.2s; }
+.logout-btn:hover { color: var(--danger); }
+
+/* ── Main ── */
+.main { margin-left: 240px; flex: 1; min-height: 100vh; }
+.topbar { padding: 20px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(13,27,42,0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 50; }
+.topbar h1 { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.weather-chip { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(0,180,216,0.1); border: 1px solid var(--border); border-radius: 999px; font-size: 0.85rem; color: var(--wave); }
+.notif-btn { position: relative; background: rgba(0,180,216,0.1); border: 1px solid var(--border); border-radius: 10px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; transition: background 0.2s; }
+.notif-btn:hover { background: rgba(0,180,216,0.2); }
+.notif-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; border: 2px solid var(--ocean); display: none; }
+
+/* ── Pages ── */
+.page { display: none; padding: 28px 32px; }
+.page.active { display: block; }
+
+/* ── Cards ── */
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 24px; }
+.card-sm { padding: 18px 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.stat-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.stat-val { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; color: #fff; }
+.stat-sub { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+.stat-icon { font-size: 1.5rem; margin-bottom: 10px; }
+
+/* ── Bottle Visual ── */
+.bottle-section { display: flex; gap: 24px; margin-bottom: 24px; }
+.bottle-card { flex: 0 0 200px; display: flex; flex-direction: column; align-items: center; padding: 28px 20px; }
+.bottle-wrap { position: relative; width: 80px; height: 180px; margin: 16px 0; }
+.bottle-outer {
+  width: 80px; height: 180px; border: 3px solid rgba(0,180,216,0.5);
+  border-radius: 10px 10px 18px 18px; position: absolute; overflow: hidden;
+  background: rgba(0,0,0,0.3);
+}
+.bottle-neck { width: 40px; height: 20px; border: 3px solid rgba(0,180,216,0.5); border-bottom: none; border-radius: 6px 6px 0 0; position: absolute; top: -22px; left: 17px; background: rgba(0,0,0,0.3); }
+.bottle-fill {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(180deg, rgba(0,180,216,0.7), rgba(0,100,200,0.9));
+  transition: height 1s cubic-bezier(0.4,0,0.2,1);
+  border-radius: 0 0 14px 14px;
+}
+.bottle-fill::before {
+  content:''; position: absolute; top: -4px; left: 0; right: 0; height: 8px;
+  background: rgba(144,224,239,0.6); border-radius: 50%;
+  animation: waveSurf 2s ease-in-out infinite;
+}
+@keyframes waveSurf { 0%,100%{transform:scaleX(1.0) translateY(0)} 50%{transform:scaleX(0.9) translateY(-3px)} }
+.bottle-pct { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:800; color:#fff; }
+
+.bottle-info { flex: 1; }
+.progress-section { margin-bottom: 20px; }
+.progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.progress-bar-bg { height: 12px; background: rgba(0,0,0,0.3); border-radius: 999px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--water), var(--accent)); border-radius: 999px; transition: width 1s ease; position: relative; }
+.progress-bar-fill::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: rgba(255,255,255,0.2); border-radius: 999px; }
+
+.big-number { font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; color:#fff; line-height:1; }
+.big-unit { font-size:1rem; color:var(--muted); margin-left:4px; }
+.goal-line { font-size:0.85rem; color:var(--muted); margin-top:6px; }
+
+.quick-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.qa-btn { padding: 8px 14px; background: rgba(0,180,216,0.1); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--wave); font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+.qa-btn:hover { background: rgba(0,180,216,0.2); border-color: var(--water); }
+
+/* ── Section headers ── */
+.section-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.section-hdr h3 { font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; }
+.section-hdr a { font-size:0.82rem; color:var(--water); cursor:pointer; }
+.section-hdr a:hover { text-decoration:underline; }
+
+/* ── Logs ── */
+.log-list { display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; }
+.log-list::-webkit-scrollbar { width:4px; }
+.log-list::-webkit-scrollbar-track { background: transparent; }
+.log-list::-webkit-scrollbar-thumb { background: rgba(0,180,216,0.3); border-radius: 4px; }
+.log-item { display:flex; align-items:center; gap:12px; padding:10px 12px; background:rgba(0,0,0,0.2); border-radius:10px; }
+.log-icon { font-size:1.1rem; }
+.log-amt { font-family:'Syne',sans-serif; font-weight:700; color:var(--water); font-size:0.95rem; }
+.log-time { font-size:0.75rem; color:var(--muted); margin-left:auto; }
+.log-src { font-size:0.7rem; color:var(--muted); }
+.empty-state { text-align:center; padding:32px; color:var(--muted); font-size:0.88rem; }
+
+/* ── Chart ── */
+.chart-wrap { position:relative; height:200px; }
+
+/* ── Activity form ── */
+.activity-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:12px; align-items:end; }
+.form-group-inline { display:flex; flex-direction:column; gap:6px; }
+.form-group-inline label { font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+.form-group-inline select, .form-group-inline input { padding:10px 12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.88rem; }
+.form-group-inline select:focus, .form-group-inline input:focus { outline:none; border-color:var(--water); }
+.form-group-inline select option { background:var(--deep); }
+.add-btn { padding:10px 20px; background:linear-gradient(135deg,var(--water),var(--accent)); border:none; border-radius:10px; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.88rem; cursor:pointer; white-space:nowrap; transition:transform 0.15s; }
+.add-btn:hover { transform:translateY(-1px); }
+
+/* ── Notification Page ── */
+.notif-list { display:flex; flex-direction:column; gap:8px; }
+.notif-item {
+  display:flex; align-items:flex-start; gap:14px; padding:16px 18px;
+  background:var(--panel); border:1px solid var(--border); border-radius:14px;
+  cursor:pointer; transition:background 0.2s;
+}
+.notif-item.unread { border-left:3px solid var(--water); }
+.notif-item:hover { background:rgba(0,180,216,0.05); }
+.notif-icon { font-size:1.5rem; flex-shrink:0; }
+.notif-body { flex:1; }
+.notif-title { font-weight:600; font-size:0.92rem; margin-bottom:4px; }
+.notif-msg { font-size:0.82rem; color:var(--muted); line-height:1.4; }
+.notif-time { font-size:0.72rem; color:var(--muted); margin-top:6px; }
+.notif-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; padding:4px; border-radius:6px; transition:color 0.2s; }
+.notif-del:hover { color:var(--danger); }
+.notif-controls { display:flex; gap:10px; margin-bottom:20px; }
+.notif-ctrl-btn { padding:8px 16px; background:rgba(0,180,216,0.1); border:1px solid var(--border); border-radius:8px; color:var(--wave); font-size:0.82rem; cursor:pointer; transition:all 0.2s; }
+.notif-ctrl-btn:hover { background:rgba(0,180,216,0.2); }
+.notif-ctrl-btn.danger { color:var(--danger); border-color:rgba(239,71,111,0.3); }
+.notif-ctrl-btn.danger:hover { background:rgba(239,71,111,0.1); }
+.badge-tag { padding:3px 8px; border-radius:999px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+.badge-reminder { background:rgba(0,180,216,0.15); color:var(--water); }
+.badge-goal_met { background:rgba(6,214,160,0.15); color:var(--success); }
+.badge-achievement { background:rgba(244,211,94,0.15); color:var(--gold); }
+.badge-goal_increased { background:rgba(255,209,102,0.15); color:var(--warn); }
+.badge-streak { background:rgba(239,71,111,0.15); color:var(--danger); }
+.badge-weather { background:rgba(72,202,228,0.15); color:var(--accent); }
+
+/* ── History page ── */
+.period-tabs { display:flex; gap:8px; margin-bottom:20px; }
+.period-tab { padding:7px 16px; border:1px solid var(--border); border-radius:8px; background:transparent; color:var(--muted); font-size:0.82rem; cursor:pointer; transition:all 0.2s; }
+.period-tab.active { background:rgba(0,180,216,0.15); border-color:var(--water); color:var(--wave); }
+
+/* ── Profile page ── */
+.profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.input-field { width:100%; padding:11px 14px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; }
+.input-field:focus { outline:none; border-color:var(--water); }
+.input-field option { background:var(--deep); }
+.save-btn { padding:12px 28px; background:linear-gradient(135deg,var(--water),var(--accent)); border:none; border-radius:10px; color:#fff; font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer; transition:transform 0.15s; }
+.save-btn:hover { transform:translateY(-1px); }
+.bmi-card { background:rgba(0,180,216,0.07); border:1px solid var(--border); border-radius:14px; padding:20px; text-align:center; }
+.bmi-val { font-family:'Syne',sans-serif; font-size:2.5rem; font-weight:800; color:var(--water); }
+.bmi-cat { font-size:0.82rem; color:var(--muted); margin-top:4px; }
+
+/* ── Goal breakdown ── */
+.breakdown-item { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:0.85rem; }
+.breakdown-item:last-child { border-bottom:none; }
+.breakdown-key { color:var(--muted); }
+.breakdown-val { color:var(--water); font-weight:600; }
+
+/* ── Toast ── */
+.toast { position:fixed; bottom:28px; right:28px; z-index:999; padding:14px 20px; background:var(--panel); border:1px solid var(--border); border-radius:12px; display:flex; align-items:center; gap:12px; font-size:0.88rem; box-shadow:0 8px 32px rgba(0,0,0,0.4); transform:translateY(100px); opacity:0; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); max-width:360px; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast-icon { font-size:1.2rem; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(0,180,216,0.25); border-radius:4px; }
+
+/* ── Responsive ── */
+@media (max-width:900px) {
+  .sidebar { transform:translateX(-100%); }
+  .main { margin-left:0; }
+  .grid-4 { grid-template-columns:1fr 1fr; }
+  .activity-grid { grid-template-columns:1fr 1fr; }
+}
+
+.streak-fire { font-size:2rem; animation:firePulse 1s ease-in-out infinite; }
+@keyframes firePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+/* ── Sensor Status ── */
+.sensor-chip { display:flex; align-items:center; gap:6px; padding:6px 14px; background:rgba(6,214,160,0.08); border:1px solid rgba(6,214,160,0.2); border-radius:999px; font-size:0.78rem; color:var(--muted); transition:all 0.3s; }
+.sensor-chip.is-live { background:rgba(6,214,160,0.14); border-color:rgba(6,214,160,0.5); color:#06d6a0; }
+.sensor-dot  { width:8px; height:8px; border-radius:50%; background:var(--muted); transition:background 0.4s; flex-shrink:0; }
+.sensor-chip.is-live .sensor-dot { background:#06d6a0; box-shadow:0 0 0 0 rgba(6,214,160,0.7); animation:sensor-pulse 1.8s infinite; }
+@keyframes sensor-pulse { 0%{box-shadow:0 0 0 0 rgba(6,214,160,0.6)} 70%{box-shadow:0 0 0 7px rgba(6,214,160,0)} 100%{box-shadow:0 0 0 0 rgba(6,214,160,0)} }
+/* Weather pill */
+.weather-chip-pill { display:flex; align-items:center; gap:7px; padding:6px 14px; background:rgba(0,180,216,0.1); border:1px solid rgba(0,180,216,0.25); border-radius:999px; font-size:0.78rem; color:var(--wave); white-space:nowrap; }
+.w-chip-sep { color:var(--border); font-size:0.65rem; }
+/* Bot floating button */
+.bot-fab { position:fixed; bottom:28px; right:28px; z-index:999; width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg,#00b4d8,#06d6a0); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.4rem; box-shadow:0 4px 20px rgba(0,180,216,0.4); transition:transform 0.2s,box-shadow 0.2s; }
+.bot-fab:hover { transform:scale(1.1); box-shadow:0 6px 28px rgba(0,180,216,0.55); }
+.bot-modal { display:none; position:fixed; bottom:96px; right:28px; z-index:998; width:360px; max-width:calc(100vw - 32px); height:480px; background:var(--surface); border:1px solid var(--border); border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden; animation:bot-slide-up 0.25s ease; }
+.bot-modal.open { display:flex; }
+@keyframes bot-slide-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.bot-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.15); }
+.bot-avatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#00b4d8,#06d6a0); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+.bot-header-info { flex:1 }
+.bot-header-name { font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:700; }
+.bot-header-sub { font-size:0.7rem; color:var(--muted); }
+.bot-close { background:none; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer; padding:4px; }
+.bot-messages { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+.bot-msg { max-width:82%; padding:9px 13px; border-radius:14px; font-size:0.83rem; line-height:1.45; }
+.bot-msg.bot  { background:rgba(0,180,216,0.12); border:1px solid rgba(0,180,216,0.2); color:var(--text); align-self:flex-start; border-bottom-left-radius:4px; }
+.bot-msg.user { background:rgba(6,214,160,0.12); border:1px solid rgba(6,214,160,0.2); color:var(--text); align-self:flex-end; border-bottom-right-radius:4px; }
+.bot-typing { display:flex; gap:4px; align-items:center; padding:10px 14px; }
+.bot-typing span { width:6px; height:6px; border-radius:50%; background:var(--muted); animation:bot-dot 1.2s infinite; }
+.bot-typing span:nth-child(2){animation-delay:0.2s} .bot-typing span:nth-child(3){animation-delay:0.4s}
+@keyframes bot-dot { 0%,80%,100%{transform:scale(0.7);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+.bot-suggestions { padding:6px 10px; display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid var(--border); background:rgba(0,0,0,0.1); }
+.bot-sug-btn { padding:5px 11px; background:rgba(0,180,216,0.08); border:1px solid rgba(0,180,216,0.2); border-radius:999px; font-size:0.72rem; color:var(--wave); cursor:pointer; transition:background 0.2s; white-space:nowrap; }
+.bot-sug-btn:hover { background:rgba(0,180,216,0.18); }
+.bot-input-row { padding:10px 12px; display:flex; gap:8px; border-top:1px solid var(--border); }
+.bot-input { flex:1; padding:9px 12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:0.83rem; outline:none; }
+.bot-input:focus { border-color:var(--water); }
+.bot-send { padding:9px 14px; background:linear-gradient(135deg,#00b4d8,#06d6a0); border:none; border-radius:10px; color:#fff; font-size:0.9rem; cursor:pointer; transition:opacity 0.2s; }
+.bot-send:hover { opacity:0.85; }
+
+/* ── Consumed from Bottle ── */
+.consumed-row { display:flex; justify-content:space-between; align-items:center; margin-top:14px; margin-bottom:6px; }
+.consumed-bar-bg { height:8px; background:rgba(0,0,0,0.25); border-radius:999px; overflow:hidden; }
+.consumed-bar-fill { height:100%; background:linear-gradient(90deg,var(--success),#06d6a0); border-radius:999px; transition:width 1s ease; }
+
+/* ── Device Settings ── */
+.device-settings { display:flex; flex-direction:column; gap:12px; }
+.device-row { display:flex; gap:10px; align-items:flex-end; }
+.device-row .form-group-inline { flex:1; }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h2>💧 HydroSync</h2>
+    <span>Smart Hydration</span>
+  </div>
+  <div class="nav">
+    <button class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">🏠</span> Dashboard</button>
+    <button class="nav-item" onclick="showPage('activity')"><span class="nav-icon">🏃</span> Log Activity</button>
+    <button class="nav-item" onclick="showPage('history')"><span class="nav-icon">📊</span> History</button>
+    <button class="nav-item" onclick="showPage('notifications')"><span class="nav-icon">🔔</span> Notifications<span class="badge" id="sidebarBadge" style="display:none">0</span></button>
+    <button class="nav-item" onclick="showPage('googlefit')"><span class="nav-icon">🏃</span> Google Fit <span class="badge fit-badge" id="fitBadge" style="display:none;background:var(--success)">●</span></button>
+    <button class="nav-item" onclick="showPage('profile')"><span class="nav-icon">👤</span> Profile</button>
+  </div>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div class="user-info">
+        <span id="userName">Loading...</span>
+        <small id="userEmail">—</small>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">🚪 Sign out</button>
+  </div>
+</nav>
+
+<!-- ── Main ── -->
+<div class="main">
+  <div class="topbar">
+    <h1 id="pageTitle">Dashboard</h1>
+    <div class="topbar-right">
+      <div class="sensor-chip">
+        <div class="sensor-dot" id="sensorDot"></div>
+        <span id="sensorStatus">○ No sensor</span>
+      </div>
+      <div id="weatherChip" class="weather-chip-pill">
+        <span id="w-chip-temp">🌡️ —°C</span>
+        <span class="w-chip-sep">·</span>
+        <span id="w-chip-hum">💧 —%</span>
+        <span class="w-chip-sep">·</span>
+        <span id="w-chip-city">📍 —</span>
+      </div>
+      <button class="notif-btn" onclick="showPage('notifications')">🔔<div class="notif-dot" id="notifDot"></div></button>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD PAGE ── -->
+  <div class="page active" id="page-dashboard">
+    <!-- Stats row -->
+    <div class="grid-4">
+      <div class="card card-sm">
+        <div class="stat-icon">💧</div>
+        <div class="stat-label">Today's Intake</div>
+        <div class="stat-val" id="statConsumed">—</div>
+        <div class="stat-sub">ml consumed</div>
+      </div>
+      <div class="card card-sm">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-label">Daily Goal</div>
+        <div class="stat-val" id="statGoal">—</div>
+        <div class="stat-sub">ml target</div>
+      </div>
+      <div class="card card-sm">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-label">Current Streak</div>
+        <div class="stat-val" id="statStreak">—</div>
+        <div class="stat-sub">days in a row</div>
+      </div>
+      <div class="card card-sm">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-label">Remaining</div>
+        <div class="stat-val" id="statRemaining">—</div>
+        <div class="stat-sub">ml to go</div>
+      </div>
+    </div>
+
+    <!-- Bottle + Progress -->
+    <div class="bottle-section">
+      <div class="card bottle-card">
+        <div class="stat-label" style="text-align:center">Bottle Level</div>
+        <div class="bottle-wrap">
+          <div class="bottle-neck"></div>
+          <div class="bottle-outer">
+            <div class="bottle-fill" id="bottleFill" style="height:100%"></div>
+          </div>
+        </div>
+        <div class="bottle-pct" id="bottlePct">—%</div>
+        <div class="stat-sub" id="bottleMl" style="text-align:center">— ml</div>
+        <div style="margin-top:12px;width:100%">
+          <div class="consumed-row">
+            <span style="font-size:0.72rem;color:var(--muted)">Consumed today</span>
+            <span style="font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;color:var(--success)" id="sensorConsumedVal">0ml</span>
+          </div>
+          <div class="consumed-bar-bg">
+            <div class="consumed-bar-fill" id="consumedBar" style="width:0%"></div>
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;text-align:center" id="remainingInBottle">—ml left in bottle</div>
+        </div>
+      </div>
+
+      <div class="card bottle-info">
+        <div class="section-hdr">
+          <h3>Today's Progress</h3>
+          <span style="font-size:0.8rem;color:var(--muted)" id="progressPct">0%</span>
+        </div>
+        <div class="progress-section">
+          <div class="progress-header">
+            <div>
+              <span class="big-number" id="bigConsumed">0</span>
+              <span class="big-unit">ml</span>
+            </div>
+            <span style="color:var(--muted);font-size:0.9rem">/ <span id="bigGoal">2000</span>ml</span>
+          </div>
+          <div class="progress-bar-bg" style="margin-top:12px">
+            <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+          </div>
+          <div class="goal-line" id="goalLine">Goal calculated from your profile + live weather</div>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <div class="stat-label">Quick Add</div>
+          <div class="quick-add">
+            <button class="qa-btn" onclick="quickAdd(100)">+100ml</button>
+            <button class="qa-btn" onclick="quickAdd(150)">+150ml ☕</button>
+            <button class="qa-btn" onclick="quickAdd(250)">+250ml 🥤</button>
+            <button class="qa-btn" onclick="quickAdd(500)">+500ml 🍶</button>
+            <button class="qa-btn" onclick="quickAdd(1000)">+1L 🚰</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="number" id="customMl" placeholder="Custom ml" min="1" max="3000"
+            style="flex:1;padding:9px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:0.88rem"/>
+          <button class="add-btn" onclick="logCustom()">Add</button>
+          <button class="add-btn" style="background:rgba(0,180,216,0.15);color:var(--wave)" onclick="recalcGoal()">🔄 Recalc Goal</button>
+        </div>
+        <div style="margin-top:10px;width:100%">
+          <div class="stat-label" style="margin-bottom:6px">Increase Today's Goal</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input type="number" id="increaseGoalMl" placeholder="e.g. 500" min="1" max="5000"
+              style="flex:1;padding:9px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:0.88rem"/>
+            <button class="add-btn" style="background:rgba(0,224,160,0.15);color:var(--success)" onclick="increaseGoal()">＋ Add to Goal</button>
+          </div>
+        </div>
+        <div id="goal-increase-feedback" style="font-size:0.78rem;margin-top:6px;text-align:center"></div>
+      </div>
+    </div>
+
+    <!-- Logs + Goal Breakdown -->
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="section-hdr">
+          <h3>Today's Logs</h3>
+          <a onclick="showPage('history')">View all →</a>
+        </div>
+        <div class="log-list" id="logList">
+          <div class="empty-state">No intake logged yet today</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-hdr"><h3>Goal Breakdown</h3></div>
+        <div id="goalBreakdown">
+          <div class="empty-state">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7-day chart -->
+    <div class="card">
+      <div class="section-hdr"><h3>7-Day Trend</h3></div>
+      <div class="chart-wrap">
+        <canvas id="weekChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ACTIVITY PAGE ── -->
+  <div class="page" id="page-activity">
+    <div class="card" style="margin-bottom:24px">
+      <div class="section-hdr"><h3>Log Exercise Activity</h3></div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:20px">Logging activity automatically increases your hydration goal and sends a notification.</p>
+      <div class="activity-grid">
+        <div class="form-group-inline">
+          <label>Activity Type</label>
+          <select id="actType">
+            <option value="running">🏃 Running</option>
+            <option value="cycling">🚴 Cycling</option>
+            <option value="swimming">🏊 Swimming</option>
+            <option value="gym">🏋️ Gym/Weights</option>
+            <option value="yoga">🧘 Yoga</option>
+            <option value="walking">🚶 Walking</option>
+            <option value="hiit">⚡ HIIT</option>
+            <option value="sports">⚽ Sports</option>
+            <option value="other">🎯 Other</option>
+          </select>
+        </div>
+        <div class="form-group-inline">
+          <label>Intensity</label>
+          <select id="actIntensity">
+            <option value="light">🟢 Light</option>
+            <option value="moderate" selected>🟡 Moderate</option>
+            <option value="intense">🔴 Intense</option>
+          </select>
+        </div>
+        <div class="form-group-inline">
+          <label>Duration (min)</label>
+          <input type="number" id="actDuration" value="30" min="5" max="360"/>
+        </div>
+        <div class="form-group-inline">
+          <label>Est. Extra Water</label>
+          <input type="text" id="actEstimate" readonly placeholder="Select above..." style="color:var(--water)"/>
+        </div>
+        <button class="add-btn" onclick="logActivity()">Log Activity</button>
+      </div>
+    </div>
+
+    <!-- Today's activities -->
+    <div class="card">
+      <div class="section-hdr"><h3>Today's Activities</h3></div>
+      <div id="activityList"><div class="empty-state">No activities logged today</div></div>
+    </div>
+  </div>
+
+  <!-- ── HISTORY PAGE ── -->
+  <div class="page" id="page-history">
+    <div class="period-tabs">
+      <button class="period-tab active" onclick="loadHistory(7,this)">7 Days</button>
+      <button class="period-tab" onclick="loadHistory(14,this)">14 Days</button>
+      <button class="period-tab" onclick="loadHistory(30,this)">30 Days</button>
+    </div>
+    <div class="grid-2" style="margin-bottom:24px">
+      <div class="card">
+        <div class="section-hdr"><h3>Daily Intake Chart</h3></div>
+        <div class="chart-wrap" style="height:260px"><canvas id="historyChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-hdr"><h3>Summary Stats</h3></div>
+        <div id="historySummary"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-hdr"><h3>Daily Log</h3></div>
+      <div id="historyTable"></div>
+    </div>
+  </div>
+
+  <!-- ── NOTIFICATIONS PAGE ── -->
+  <div class="page" id="page-notifications">
+    <div class="notif-controls">
+      <button class="notif-ctrl-btn" onclick="markAllRead()">✓ Mark all read</button>
+      <button class="notif-ctrl-btn danger" onclick="clearAllNotifs()">🗑 Clear all</button>
+    </div>
+    <div id="notifList"><div class="empty-state">No notifications yet</div></div>
+  </div>
+
+  <!-- ── PROFILE PAGE ── -->
+  <div class="page" id="page-profile">
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="section-hdr"><h3>Physical Profile</h3></div>
+          <div class="profile-grid">
+            <div class="form-group-inline">
+              <label>Age</label>
+              <input type="number" id="pAge" class="input-field"/>
+            </div>
+            <div class="form-group-inline">
+              <label>Gender</label>
+              <select id="pGender" class="input-field">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group-inline">
+              <label>Weight (kg)</label>
+              <input type="number" id="pWeight" class="input-field"/>
+            </div>
+            <div class="form-group-inline">
+              <label>Height (cm)</label>
+              <input type="number" id="pHeight" class="input-field"/>
+            </div>
+          </div>
+          <div class="form-group-inline" style="margin-top:14px">
+            <label>Activity Level</label>
+            <select id="pActivity" class="input-field">
+              <option value="sedentary">Sedentary</option>
+              <option value="light">Light</option>
+              <option value="moderate">Moderate</option>
+              <option value="active">Active</option>
+              <option value="very_active">Very Active</option>
+            </select>
+          </div>
+          <div class="form-group-inline" style="margin-top:14px">
+            <label>City</label>
+            <input type="text" id="pCity" class="input-field" placeholder="Chennai"/>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="section-hdr"><h3>Health Conditions</h3></div>
+          <div class="conditions-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;cursor:pointer;font-size:0.82rem"><input type="checkbox" id="pKidney" style="accent-color:var(--water)"/> 💎 Kidney Stones</label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;cursor:pointer;font-size:0.82rem"><input type="checkbox" id="pDiabetes" style="accent-color:var(--water)"/> 🩸 Diabetes</label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;cursor:pointer;font-size:0.82rem"><input type="checkbox" id="pHtn" style="accent-color:var(--water)"/> ❤️ Hypertension</label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;cursor:pointer;font-size:0.82rem"><input type="checkbox" id="pUti" style="accent-color:var(--water)"/> 🔬 UTI</label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;cursor:pointer;font-size:0.82rem"><input type="checkbox" id="pHeart" style="accent-color:var(--water)"/> 🫀 Heart Disease</label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;cursor:pointer;font-size:0.82rem"><input type="checkbox" id="pPregnant" style="accent-color:var(--water)"/> 🤰 Pregnant</label>
+          </div>
+        </div>
+
+        <button class="save-btn" onclick="saveProfile()">Save & Recalculate Goal</button>
+        <!-- ── Device / Sensor Settings ── -->
+        <div class="card" style="margin-top:20px">
+          <div class="section-hdr"><h3>🌡️ Sensor Device Settings</h3></div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">Connect your ESP32 for live bottle monitoring. Enter the IP address shown in the Arduino Serial Monitor.</p>
+          <div class="device-settings">
+            <div class="device-row">
+              <div class="form-group-inline">
+                <label>ESP32 IP Address</label>
+                <input type="text" id="esp32IpInput" class="input-field" placeholder="e.g. 192.168.1.45"
+                  value="" oninput="" style="font-family:monospace"/>
+              </div>
+              <div class="form-group-inline" style="max-width:130px">
+                <label>Bottle Capacity (ml)</label>
+                <input type="number" id="bottleCapInput" class="input-field" placeholder="500" value="500" min="100" max="2000"/>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <button class="save-btn" style="padding:10px 20px" onclick="saveESP32Config()">💾 Save Device Config</button>
+              <button class="add-btn" style="background:rgba(0,180,216,0.15);color:var(--wave);padding:10px 16px" onclick="pollESP32();toast('Testing connection...','📡')">📡 Test</button>
+            </div>
+            <div style="font-size:0.78rem;color:var(--muted);padding:10px;background:rgba(0,0,0,0.2);border-radius:8px">
+              💡 Calibration tip: With an empty bottle on the scale, set factor = −2000. Place 200g of water → check Serial Monitor → adjust factor until reading is ~200.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="bmi-card" style="margin-bottom:20px">
+          <div class="stat-label">Your BMI</div>
+          <div class="bmi-val" id="bmiVal">—</div>
+          <div class="bmi-cat" id="bmiCat">—</div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="section-hdr"><h3>All-Time Stats</h3></div>
+          <div id="allTimeStats"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-hdr"><h3>Notification Preferences</h3></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <label style="display:flex;align-items:center;justify-content:space-between;font-size:0.85rem">
+              Hourly Reminders
+              <input type="checkbox" id="nfReminder" style="width:16px;height:16px;accent-color:var(--water)"/>
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;font-size:0.85rem">
+              Achievement Alerts
+              <input type="checkbox" id="nfAchievement" style="width:16px;height:16px;accent-color:var(--water)"/>
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;font-size:0.85rem">
+              Weather Alerts
+              <input type="checkbox" id="nfWeather" style="width:16px;height:16px;accent-color:var(--water)"/>
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;font-size:0.85rem">
+              Activity Alerts
+              <input type="checkbox" id="nfActivity" style="width:16px;height:16px;accent-color:var(--water)"/>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ══════════════════  GOOGLE FIT PAGE  ══════════════════ -->
+  <div class="page" id="page-googlefit">
+    <!-- Connection Banner -->
+    <div id="fitConnectBanner" class="card" style="margin-bottom:24px;background:linear-gradient(135deg,rgba(0,180,216,0.12),rgba(6,214,160,0.08));border-color:rgba(6,214,160,0.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#4285f4,#34a853);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">🏃</div>
+          <div>
+            <h2 style="font-family:'Syne',sans-serif;font-size:1.15rem;margin-bottom:4px">Google Fit Integration</h2>
+            <p style="font-size:0.82rem;color:var(--muted)" id="fitStatusText">Connect your Google Fit account to let real activity data auto-adjust your daily water goal.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="fitConnectBtn" class="save-btn" style="padding:10px 22px;font-size:0.85rem" onclick="connectGoogleFit()">
+            <span style="margin-right:6px">🔗</span> Connect Google Fit
+          </button>
+          <button id="fitDisconnectBtn" class="save-btn" style="padding:10px 22px;font-size:0.85rem;background:rgba(239,71,111,0.15);color:var(--danger);border:1px solid rgba(239,71,111,0.3);display:none" onclick="disconnectGoogleFit()">
+            Disconnect
+          </button>
+          <button id="fitSyncBtn" style="padding:10px 16px;font-size:0.85rem;border-radius:10px;border:1px solid var(--border);background:rgba(0,180,216,0.1);color:var(--water);cursor:pointer;display:none" onclick="syncFitData()">
+            🔄 Sync Now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fit Stats (visible when connected) -->
+    <div id="fitStatsSection" style="display:none">
+      <div class="grid-4" style="margin-bottom:24px">
+        <div class="card card-sm" style="border-color:rgba(66,133,244,0.3)">
+          <div class="stat-icon">👟</div>
+          <div class="stat-label">Steps Today</div>
+          <div class="stat-val" id="fitSteps" style="color:#4285f4">—</div>
+          <div class="stat-sub" id="fitStepsGoal">Goal: 10,000</div>
+        </div>
+        <div class="card card-sm" style="border-color:rgba(52,168,83,0.3)">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-label">Active Minutes</div>
+          <div class="stat-val" id="fitActiveMin" style="color:#34a853">—</div>
+          <div class="stat-sub">WHO rec: 30+ min</div>
+        </div>
+        <div class="card card-sm" style="border-color:rgba(251,188,5,0.3)">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-label">Calories Burned</div>
+          <div class="stat-val" id="fitCalories" style="color:#fbbc05">—</div>
+          <div class="stat-sub">kcal</div>
+        </div>
+        <div class="card card-sm" style="border-color:rgba(234,67,53,0.3)">
+          <div class="stat-icon">❤️</div>
+          <div class="stat-label">Avg Heart Rate</div>
+          <div class="stat-val" id="fitHeartRate" style="color:#ea4335">—</div>
+          <div class="stat-sub">bpm</div>
+        </div>
+      </div>
+
+      <!-- Hydration Impact Card -->
+      <div class="grid-2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="section-hdr" style="margin-bottom:16px"><h3>💧 Hydration Impact from Fit</h3></div>
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">Your activity data is automatically boosting your daily water goal:</p>
+
+          <div id="fitBreakdownRows" style="display:flex;flex-direction:column;gap:10px">
+            <!-- populated by JS -->
+          </div>
+
+          <div style="margin-top:16px;padding:14px;background:rgba(6,214,160,0.08);border-radius:12px;border:1px solid rgba(6,214,160,0.2)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:0.85rem;color:var(--muted)">Total Fit Bonus Added</span>
+              <span style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--success)" id="fitTotalBonus">+0 ml</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+              <span style="font-size:0.85rem;color:var(--muted)">Updated Goal</span>
+              <span style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--water)" id="fitNewGoal">— ml</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-hdr" style="margin-bottom:16px"><h3>📊 Steps Progress</h3></div>
+          <canvas id="stepsChart" style="max-height:200px"></canvas>
+          <div id="fitLastSync" style="font-size:0.75rem;color:var(--muted);text-align:center;margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="card">
+        <div class="section-hdr" style="margin-bottom:14px"><h3>⚙️ How Goal Adjustment Works</h3></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div style="padding:14px;background:rgba(66,133,244,0.07);border-radius:12px;border:1px solid rgba(66,133,244,0.2)">
+            <div style="font-size:1.2rem;margin-bottom:8px">👟</div>
+            <div style="font-size:0.8rem;font-weight:600;color:#4285f4;margin-bottom:4px">Steps Bonus</div>
+            <div style="font-size:0.78rem;color:var(--muted)">+80 ml per 1,000 steps above 5,000 baseline</div>
+          </div>
+          <div style="padding:14px;background:rgba(52,168,83,0.07);border-radius:12px;border:1px solid rgba(52,168,83,0.2)">
+            <div style="font-size:1.2rem;margin-bottom:8px">⚡</div>
+            <div style="font-size:0.8rem;font-weight:600;color:#34a853;margin-bottom:4px">Active Minutes</div>
+            <div style="font-size:0.78rem;color:var(--muted)">+150 ml per every 30 active minutes</div>
+          </div>
+          <div style="padding:14px;background:rgba(251,188,5,0.07);border-radius:12px;border:1px solid rgba(251,188,5,0.2)">
+            <div style="font-size:1.2rem;margin-bottom:8px">🔥</div>
+            <div style="font-size:0.8rem;font-weight:600;color:#fbbc05;margin-bottom:4px">Calories Burned</div>
+            <div style="font-size:0.78rem;color:var(--muted)">+100 ml per 200 kcal above 400 baseline</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding:12px;background:rgba(0,0,0,0.2);border-radius:10px;font-size:0.78rem;color:var(--muted)">
+          ℹ️ The combined Fit bonus is capped at <strong style="color:var(--text)">1,500 ml</strong> and syncs automatically when you open this page.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">✅</span>
+  <span id="toastMsg">Done!</span>
+</div>
+
+<script>
+const API = 'http://localhost:5000/api';
+let TOKEN = localStorage.getItem('hs_token');
+let USER = JSON.parse(localStorage.getItem('hs_user') || '{}');
+let weekChartInstance = null;
+let historyChartInstance = null;
+
+if (!TOKEN) window.location.href = 'index.html';
+
+// ── Page navigation ──────────────────────────────────────────────────────
+const pageTitles = { dashboard:'Dashboard', activity:'Log Activity', history:'History', notifications:'Notifications', profile:'Profile', googlefit:'Google Fit' };
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => { if(n.textContent.trim().startsWith(pageTitles[name][0])) n.classList.add('active'); });
+  document.querySelectorAll('.nav-item').forEach(n => { const t = n.innerText.toLowerCase(); if(t.includes(name.toLowerCase())) n.classList.add('active'); });
+  document.getElementById('pageTitle').textContent = pageTitles[name];
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'history')   loadHistory(7);
+  if (name === 'notifications') loadNotifications();
+  if (name === 'activity')  loadActivities();
+  if (name === 'profile')   loadProfile();
+  if (name === 'googlefit') loadGoogleFit();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function authFetch(url, opts={}) {
+  return fetch(API + url, { ...opts, headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${TOKEN}`, ...(opts.headers||{}) } });
+}
+function toast(msg, icon='✅') {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = icon;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+function fmtTime(ts) {
+  return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const r = await authFetch('/hydration/today');
+    const d = await r.json();
+    updateDashboardUI(d);
+    loadWeekChart();
+    loadUnreadBadge();
+  } catch(e) { toast('Could not load dashboard', '❌'); }
+}
+
+function updateDashboardUI(d) {
+  const { todayConsumed:c, todayGoal:g, percentage:pct, remaining:rem, logs, weather, goalBreakdown, stats, bottleLevel } = d;
+
+  document.getElementById('statConsumed').textContent = c;
+  document.getElementById('statGoal').textContent = g;
+  document.getElementById('statStreak').textContent = (stats?.streak || 0);
+  document.getElementById('statRemaining').textContent = Math.max(0, rem);
+  document.getElementById('bigConsumed').textContent = c;
+  document.getElementById('bigGoal').textContent = g;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+
+  // Bottle fill — use configurable capacity (default 500ml)
+  const BOTTLE_CAP = parseInt(localStorage.getItem('hs_bottle_cap') || '500');
+  const bottlePct  = Math.min(100, Math.round((bottleLevel / BOTTLE_CAP) * 100));
+  document.getElementById('bottleFill').style.height = bottlePct + '%';
+  document.getElementById('bottlePct').textContent   = bottlePct + '%';
+  document.getElementById('bottleMl').textContent    = bottleLevel + 'ml / ' + BOTTLE_CAP + 'ml';
+
+  // Consumed-from-bottle today (from sensor logs)
+  const sensorConsumed = d?.sensorConsumed ?? 0;
+  const consumedPct    = Math.min(100, Math.round((sensorConsumed / (USER.todayGoal || g || 2000)) * 100));
+  document.getElementById('sensorConsumedVal').textContent = sensorConsumed + 'ml';
+  document.getElementById('consumedBar').style.width = consumedPct + '%';
+  // FIX: remaining in bottle = current bottle level, NOT cap minus consumed
+  document.getElementById('remainingInBottle').textContent = (bottleLevel ?? 0) + 'ml left in bottle';
+
+  // Sensor status pulse
+  if (bottleLevel > 0) {
+    document.getElementById('sensorDot').style.background = 'var(--success)';
+    document.getElementById('sensorStatus').textContent   = 'LIVE';
+    document.querySelector('.sensor-chip')?.classList.add('is-live');
+  }
+
+  // Weather chip
+  if (weather) {
+  const icon = weather.temperature >= 35 ? '🌡️🔥' :
+               weather.temperature >= 25 ? '☀️' : '🌤️';
+
+  document.getElementById('w-chip-temp').textContent = `${icon} ${Math.round(weather.temperature)}°C`;
+  document.getElementById('w-chip-hum').textContent  = `💧 ${weather.humidity}%`;
+  document.getElementById('w-chip-city').textContent = `📍 ${weather.city}`;
+}
+
+  // Goal line
+  if (goalBreakdown?.weather) {
+    document.getElementById('goalLine').textContent = `Base ${goalBreakdown.base}ml + weather +${goalBreakdown.weatherBonus||0}ml + activity ×${goalBreakdown.activityMultiplier||1}`;
+  }
+
+  // Logs
+  const logEl = document.getElementById('logList');
+  if (!logs?.length) {
+    logEl.innerHTML = '<div class="empty-state">No intake logged yet today</div>';
+  } else {
+    logEl.innerHTML = logs.map(l => `
+      <div class="log-item">
+        <span class="log-icon">${l.source==='sensor'?'📡':l.source==='manual'?'✋':'⚙️'}</span>
+        <div><div class="log-amt">+${l.amount}ml</div><div class="log-src">${l.source}</div></div>
+        <span class="log-time">${fmtTime(l.timestamp)}</span>
+      </div>`).join('');
+  }
+
+  // Breakdown
+  const bEl = document.getElementById('goalBreakdown');
+  if (goalBreakdown) {
+    const items = [
+      ['Base (weight × 35ml)', goalBreakdown.base+'ml'],
+      ['BMI Bonus', goalBreakdown.bmiBonus ? '+'+goalBreakdown.bmiBonus+'ml' : '—'],
+      ['Activity Multiplier', '×'+(goalBreakdown.activityMultiplier||1)],
+      ['Weather Bonus', goalBreakdown.weatherBonus ? '+'+goalBreakdown.weatherBonus+'ml' : '—'],
+      ['Health Bonuses', Object.entries({kidneyBonus:'Kidney',utiBonus:'UTI',diabetesBonus:'Diabetes',pregnantBonus:'Pregnant',breastfeedingBonus:'Breastfeeding'}).filter(([k])=>goalBreakdown[k]).map(([k,v])=>`${v}+${goalBreakdown[k]}`).join(', ')||'—'],
+      ['🏃 Google Fit Bonus', goalBreakdown.googleFitBonus ? '<span style="color:var(--success)">+'+goalBreakdown.googleFitBonus+'ml</span>' : '—'],
+      ['Final Goal', '<strong style="color:var(--water)">'+g+'ml</strong>'],
+    ];
+    bEl.innerHTML = items.map(([k,v]) => `<div class="breakdown-item"><span class="breakdown-key">${k}</span><span class="breakdown-val">${v}</span></div>`).join('');
+  }
+}
+
+// ── Quick add / manual log ─────────────────────────────────────────────
+async function quickAdd(ml) {
+  try {
+    const r = await authFetch('/hydration/log', { method:'POST', body: JSON.stringify({ amount: ml, note: `Quick add ${ml}ml` }) });
+    const d = await r.json();
+    updateDashboardUI({ ...d, logs: d.log ? [d.log] : [], weather: null, goalBreakdown: null, stats: USER.stats || {}, bottleLevel: 0 });
+    await loadDashboard();
+    toast(`+${ml}ml logged! 💧`);
+  } catch(e) { toast('Failed to log water', '❌'); }
+}
+
+async function logCustom() {
+  const ml = parseInt(document.getElementById('customMl').value);
+  if (!ml || ml <= 0) return toast('Enter a valid amount', '⚠️');
+  await quickAdd(ml);
+  document.getElementById('customMl').value = '';
+}
+
+async function recalcGoal() {
+  try {
+    const r = await authFetch('/hydration/recalculate', { method: 'POST' });
+    const d = await r.json();
+    toast(`Goal updated to ${d.newGoal}ml 🎯`);
+    loadDashboard();
+  } catch(e) { toast('Could not recalculate', '❌'); }
+}
+
+async function increaseGoal() {
+  const ml = parseInt(document.getElementById('increaseGoalMl').value);
+  if (!ml || ml <= 0 || ml > 5000) return toast('Enter amount between 1–5000 ml', '⚠️');
+  try {
+    const r = await authFetch('/hydration/goal/increase', {
+      method: 'POST',
+      body: JSON.stringify({ extraMl: ml })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message);
+    document.getElementById('increaseGoalMl').value = '';
+    const fb = document.getElementById('goal-increase-feedback');
+    fb.textContent = `✅ Goal increased by ${ml}ml → new goal: ${d.newGoal}ml`;
+    fb.style.color = 'var(--success)';
+    setTimeout(() => fb.textContent = '', 4000);
+    toast(`Goal +${ml}ml → ${d.newGoal}ml total 🎯`);
+    loadDashboard();
+  } catch(e) {
+    const fb = document.getElementById('goal-increase-feedback');
+    fb.textContent = '❌ Failed: ' + e.message;
+    fb.style.color = 'var(--danger)';
+  }
+}
+
+// ── 7-day chart ──────────────────────────────────────────────────────────
+async function loadWeekChart() {
+  try {
+    const r = await authFetch('/hydration/history?days=7');
+    const d = await r.json();
+    const labels = d.history.map(h => { const dt = new Date(h.date); return dt.toLocaleDateString([],{weekday:'short'}); });
+    const vals = d.history.map(h => h.total);
+    const goal = USER.todayGoal || 2000;
+
+    const ctx = document.getElementById('weekChart').getContext('2d');
+    if (weekChartInstance) weekChartInstance.destroy();
+    weekChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label:'Intake (ml)', data: vals, backgroundColor: vals.map(v => v >= goal ? 'rgba(6,214,160,0.7)' : 'rgba(0,180,216,0.6)'), borderRadius: 8, borderSkipped: false },
+          { label:'Goal', data: Array(labels.length).fill(goal), type:'line', borderColor:'rgba(244,211,94,0.7)', borderDash:[5,5], borderWidth:2, pointRadius:0, fill:false }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#7eb8cc', font:{size:11} } } },
+        scales: { x:{ ticks:{color:'#7eb8cc'}, grid:{color:'rgba(0,180,216,0.05)'} }, y:{ ticks:{color:'#7eb8cc'}, grid:{color:'rgba(0,180,216,0.05)'} } } }
+    });
+  } catch(e) {}
+}
+
+// ── ACTIVITY PAGE ────────────────────────────────────────────────────────
+const actWaterRates = {
+  running:{light:400,moderate:600,intense:900}, cycling:{light:350,moderate:500,intense:750},
+  swimming:{light:200,moderate:400,intense:600}, gym:{light:300,moderate:500,intense:700},
+  yoga:{light:150,moderate:250,intense:350}, walking:{light:200,moderate:300,intense:400},
+  hiit:{light:500,moderate:700,intense:1000}, sports:{light:400,moderate:600,intense:900}, other:{light:300,moderate:450,intense:650}
+};
+function updateEstimate() {
+  const type = document.getElementById('actType').value;
+  const intensity = document.getElementById('actIntensity').value;
+  const dur = parseInt(document.getElementById('actDuration').value) || 30;
+  const rate = (actWaterRates[type]?.[intensity] || 500) / 60;
+  document.getElementById('actEstimate').value = `+${Math.round(rate * dur)}ml`;
+}
+['actType','actIntensity','actDuration'].forEach(id => document.getElementById(id)?.addEventListener('change', updateEstimate));
+document.getElementById('actDuration')?.addEventListener('input', updateEstimate);
+
+async function logActivity() {
+  const type = document.getElementById('actType').value;
+  const intensity = document.getElementById('actIntensity').value;
+  const duration = parseInt(document.getElementById('actDuration').value);
+  if (!duration) return toast('Enter duration', '⚠️');
+  try {
+    const r = await authFetch('/hydration/activity', { method:'POST', body: JSON.stringify({ type, intensity, duration }) });
+    const d = await r.json();
+    toast(`Activity logged! Goal +${d.extra}ml → ${d.newGoal}ml total 🏃`, '🏋️');
+    loadActivities();
+  } catch(e) { toast('Failed to log activity', '❌'); }
+}
+
+async function loadActivities() {
+  try {
+    const r = await authFetch('/hydration/activities');
+    const acts = await r.json();
+    const el = document.getElementById('activityList');
+    if (!acts.length) { el.innerHTML = '<div class="empty-state">No activities logged today</div>'; return; }
+    el.innerHTML = acts.map(a => `
+      <div class="log-item">
+        <span class="log-icon">${{running:'🏃',cycling:'🚴',swimming:'🏊',gym:'🏋️',yoga:'🧘',walking:'🚶',hiit:'⚡',sports:'⚽'}[a.type]||'🎯'}</span>
+        <div>
+          <div class="log-amt">${a.type} — ${a.intensity}</div>
+          <div class="log-src">${a.duration} min · +${a.extraWaterNeeded}ml to goal</div>
+        </div>
+        <span class="log-time">${fmtTime(a.timestamp)}</span>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+// ── HISTORY PAGE ─────────────────────────────────────────────────────────
+let histChartInst = null;
+async function loadHistory(days, btn) {
+  if (btn) { document.querySelectorAll('.period-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); }
+  try {
+    const r = await authFetch(`/hydration/history?days=${days}`);
+    const d = await r.json();
+    const history = d.history;
+    const goal = USER.todayGoal || 2000;
+
+    // Chart
+    const ctx = document.getElementById('historyChart').getContext('2d');
+    if (histChartInst) histChartInst.destroy();
+    histChartInst = new Chart(ctx, {
+      type:'bar',
+      data: {
+        labels: history.map(h => fmtDate(h.date)),
+        datasets: [
+          { label:'Intake (ml)', data: history.map(h=>h.total), backgroundColor: history.map(h=>h.total>=goal?'rgba(6,214,160,0.7)':'rgba(0,180,216,0.6)'), borderRadius:6 },
+          { label:'Goal', data:Array(history.length).fill(goal), type:'line', borderColor:'rgba(244,211,94,0.7)', borderDash:[5,5], borderWidth:2, pointRadius:0, fill:false }
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#7eb8cc',font:{size:11}}}},
+        scales:{ x:{ticks:{color:'#7eb8cc',maxRotation:45},grid:{color:'rgba(0,180,216,0.05)'}}, y:{ticks:{color:'#7eb8cc'},grid:{color:'rgba(0,180,216,0.05)'}} } }
+    });
+
+    // Summary
+    const totals = history.map(h=>h.total).filter(v=>v>0);
+    const avg = totals.length ? Math.round(totals.reduce((a,b)=>a+b,0)/totals.length) : 0;
+    const best = totals.length ? Math.max(...totals) : 0;
+    const goalDays = history.filter(h=>h.total>=goal).length;
+    document.getElementById('historySummary').innerHTML = `
+      <div class="breakdown-item"><span class="breakdown-key">Average Daily</span><span class="breakdown-val">${avg}ml</span></div>
+      <div class="breakdown-item"><span class="breakdown-key">Best Day</span><span class="breakdown-val">${best}ml</span></div>
+      <div class="breakdown-item"><span class="breakdown-key">Goals Met</span><span class="breakdown-val">${goalDays}/${days} days</span></div>
+      <div class="breakdown-item"><span class="breakdown-key">Total Volume</span><span class="breakdown-val">${(totals.reduce((a,b)=>a+b,0)/1000).toFixed(1)}L</span></div>
+      <div class="breakdown-item"><span class="breakdown-key">Streak</span><span class="breakdown-val">${d.stats?.streak||0} days 🔥</span></div>
+      <div class="breakdown-item"><span class="breakdown-key">Longest Streak</span><span class="breakdown-val">${d.stats?.longestStreak||0} days</span></div>`;
+
+    // Table
+    document.getElementById('historyTable').innerHTML = history.slice().reverse().map(h => `
+      <div class="log-item" style="margin-bottom:6px">
+        <span style="font-size:1rem">${h.total >= goal ? '✅' : h.total > 0 ? '⚡' : '⭕'}</span>
+        <div style="flex:1">
+          <div style="font-size:0.88rem;font-weight:600">${fmtDate(h.date)}</div>
+          <div style="font-size:0.78rem;color:var(--muted)">${h.logs.length} log entries</div>
+        </div>
+        <div style="text-align:right">
+          <div style="color:${h.total>=goal?'var(--success)':'var(--water)'};font-weight:700">${h.total}ml</div>
+          <div style="font-size:0.75rem;color:var(--muted)">${Math.round(h.total/goal*100)}% of goal</div>
+        </div>
+      </div>`).join('');
+  } catch(e) { toast('Could not load history', '❌'); }
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────
+async function loadNotifications() {
+  try {
+    const r = await authFetch('/notifications?limit=50');
+    const d = await r.json();
+    renderNotifications(d.notifications);
+    updateBadge(d.unreadCount);
+  } catch(e) {}
+}
+function renderNotifications(notifs) {
+  const el = document.getElementById('notifList');
+  if (!notifs?.length) { el.innerHTML = '<div class="empty-state">🔔 No notifications yet<br><span style="font-size:0.8rem">Drink water and log activities to get started!</span></div>'; return; }
+  el.innerHTML = `<div class="notif-list">${notifs.map(n=>`
+    <div class="notif-item ${n.isRead?'':'unread'}" id="notif-${n._id}" onclick="markRead('${n._id}')">
+      <span class="notif-icon">${n.icon||'💧'}</span>
+      <div class="notif-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span class="notif-title">${n.title}</span>
+          <span class="badge-tag badge-${n.type}">${n.type.replace('_',' ')}</span>
+          ${n.priority==='high'?'<span style="color:var(--danger);font-size:0.7rem;font-weight:700">HIGH</span>':''}
+        </div>
+        <div class="notif-msg">${n.message}</div>
+        <div class="notif-time">${new Date(n.createdAt).toLocaleString()}</div>
+      </div>
+      <button class="notif-del" onclick="event.stopPropagation();deleteNotif('${n._id}')">✕</button>
+    </div>`).join('')}</div>`;
+}
+async function markRead(id) {
+  await authFetch(`/notifications/${id}/read`, { method:'PUT' });
+  document.getElementById(`notif-${id}`)?.classList.remove('unread');
+  loadUnreadBadge();
+}
+async function markAllRead() {
+  await authFetch('/notifications/read-all', { method:'PUT' });
+  document.querySelectorAll('.notif-item').forEach(n=>n.classList.remove('unread'));
+  updateBadge(0);
+  toast('All notifications marked as read', '✅');
+}
+async function deleteNotif(id) {
+  await authFetch(`/notifications/${id}`, { method:'DELETE' });
+  document.getElementById(`notif-${id}`)?.remove();
+  loadUnreadBadge();
+}
+async function clearAllNotifs() {
+  if (!confirm('Clear all notifications?')) return;
+  await authFetch('/notifications/clear-all', { method:'DELETE' });
+  document.getElementById('notifList').innerHTML = '<div class="empty-state">All cleared!</div>';
+  updateBadge(0);
+}
+async function loadUnreadBadge() {
+  try {
+    const r = await authFetch('/notifications?limit=1');
+    const d = await r.json();
+    updateBadge(d.unreadCount);
+  } catch(e) {}
+}
+function updateBadge(count) {
+  const badge = document.getElementById('sidebarBadge');
+  const dot = document.getElementById('notifDot');
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline-block' : 'none';
+  dot.style.display = count > 0 ? 'block' : 'none';
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────
+function loadProfile() {
+  const u = USER;
+  // Load device config
+  document.getElementById('esp32IpInput').value   = localStorage.getItem('hs_esp32_ip')  || '';
+  document.getElementById('bottleCapInput').value = localStorage.getItem('hs_bottle_cap') || '500';
+  if (!u?.profile) return;
+  document.getElementById('pAge').value     = u.profile.age || '';
+  document.getElementById('pGender').value  = u.profile.gender || 'male';
+  document.getElementById('pWeight').value  = u.profile.weight || '';
+  document.getElementById('pHeight').value  = u.profile.height || '';
+  document.getElementById('pActivity').value= u.profile.activityLevel || 'moderate';
+  document.getElementById('pCity').value    = u.location?.city || '';
+  if (u.healthConditions) {
+    document.getElementById('pKidney').checked   = u.healthConditions.kidneyStones;
+    document.getElementById('pDiabetes').checked = u.healthConditions.diabetes;
+    document.getElementById('pHtn').checked      = u.healthConditions.hypertension;
+    document.getElementById('pUti').checked      = u.healthConditions.uti;
+    document.getElementById('pHeart').checked    = u.healthConditions.heartDisease;
+    document.getElementById('pPregnant').checked = u.healthConditions.pregnant;
+  }
+  if (u.notificationPrefs) {
+    document.getElementById('nfReminder').checked   = u.notificationPrefs.reminderEnabled;
+    document.getElementById('nfAchievement').checked= u.notificationPrefs.achievementAlerts;
+    document.getElementById('nfWeather').checked    = u.notificationPrefs.weatherAlerts;
+    document.getElementById('nfActivity').checked   = u.notificationPrefs.activityAlerts;
+  }
+  // BMI
+  if (u.profile.weight && u.profile.height) {
+    const bmi = u.profile.weight / Math.pow(u.profile.height/100, 2);
+    document.getElementById('bmiVal').textContent = bmi.toFixed(1);
+    const cats = bmi<18.5?'Underweight':bmi<25?'Normal weight':bmi<30?'Overweight':'Obese';
+    const colors = {'Underweight':'var(--warn)','Normal weight':'var(--success)','Overweight':'var(--warn)','Obese':'var(--danger)'};
+    document.getElementById('bmiCat').textContent = cats;
+    document.getElementById('bmiCat').style.color = colors[cats];
+  }
+  // All-time stats
+  const s = u.stats || {};
+  document.getElementById('allTimeStats').innerHTML = `
+    <div class="breakdown-item"><span class="breakdown-key">Total Litres</span><span class="breakdown-val">${(s.totalLiters||0).toFixed(1)}L</span></div>
+    <div class="breakdown-item"><span class="breakdown-key">Goals Met</span><span class="breakdown-val">${s.goalsMetCount||0} days</span></div>
+    <div class="breakdown-item"><span class="breakdown-key">Current Streak</span><span class="breakdown-val">${s.streak||0} 🔥</span></div>
+    <div class="breakdown-item"><span class="breakdown-key">Longest Streak</span><span class="breakdown-val">${s.longestStreak||0} days</span></div>`;
+}
+
+async function saveProfile() {
+  const body = {
+    profile: {
+      age: parseInt(document.getElementById('pAge').value),
+      gender: document.getElementById('pGender').value,
+      weight: parseFloat(document.getElementById('pWeight').value),
+      height: parseFloat(document.getElementById('pHeight').value),
+      activityLevel: document.getElementById('pActivity').value
+    },
+    healthConditions: {
+      kidneyStones: document.getElementById('pKidney').checked,
+      diabetes: document.getElementById('pDiabetes').checked,
+      hypertension: document.getElementById('pHtn').checked,
+      uti: document.getElementById('pUti').checked,
+      heartDisease: document.getElementById('pHeart').checked,
+      pregnant: document.getElementById('pPregnant').checked
+    },
+    location: { city: document.getElementById('pCity').value, country:'IN' },
+    notificationPrefs: {
+      reminderEnabled: document.getElementById('nfReminder').checked,
+      achievementAlerts: document.getElementById('nfAchievement').checked,
+      weatherAlerts: document.getElementById('nfWeather').checked,
+      activityAlerts: document.getElementById('nfActivity').checked
+    }
+  };
+  try {
+    const r = await authFetch('/auth/profile', { method:'PUT', body: JSON.stringify(body) });
+    const d = await r.json();
+    USER = d.user;
+    localStorage.setItem('hs_user', JSON.stringify(USER));
+    toast(`Profile saved! New goal: ${USER.todayGoal}ml 🎯`);
+    loadProfile();
+  } catch(e) { toast('Failed to save profile', '❌'); }
+}
+
+// ── Logout ────────────────────────────────────────────────────────────────
+function logout() {
+  localStorage.clear();
+  window.location.href = 'index.html';
+}
+
+// ── Google Fit ─────────────────────────────────────────────────────────────
+let stepsChartInstance = null;
+
+async function connectGoogleFit() {
+  try {
+    const r = await authFetch('/googlefit/auth-url');
+    const d = await r.json();
+    window.location.href = d.url;
+  } catch(e) { toast('Failed to start Google Fit auth', '❌'); }
+}
+
+async function disconnectGoogleFit() {
+  if (!confirm('Disconnect Google Fit? Your goal will revert to the formula-based calculation.')) return;
+  try {
+    await authFetch('/googlefit/disconnect', { method: 'DELETE' });
+    renderFitUI(null);
+    toast('Google Fit disconnected');
+  } catch(e) { toast('Failed to disconnect', '❌'); }
+}
+
+async function syncFitData() {
+  document.getElementById('fitSyncBtn').textContent = '⏳ Syncing…';
+  try {
+    const r = await authFetch('/googlefit/today');
+    const d = await r.json();
+    renderFitUI(d);
+    if (d.connected && d.newGoal) toast(`Goal updated to ${d.newGoal}ml from Fit data 🏃`);
+  } catch(e) { toast('Sync failed', '❌'); }
+  finally { document.getElementById('fitSyncBtn').textContent = '🔄 Sync Now'; }
+}
+
+function renderFitUI(d) {
+  const banner    = document.getElementById('fitConnectBanner');
+  const connectBtn   = document.getElementById('fitConnectBtn');
+  const disconnectBtn = document.getElementById('fitDisconnectBtn');
+  const syncBtn   = document.getElementById('fitSyncBtn');
+  const statsSection = document.getElementById('fitStatsSection');
+  const statusText   = document.getElementById('fitStatusText');
+  const fitBadge     = document.getElementById('fitBadge');
+
+  if (!d || !d.connected) {
+    connectBtn.style.display    = '';
+    disconnectBtn.style.display = 'none';
+    syncBtn.style.display       = 'none';
+    statsSection.style.display  = 'none';
+    fitBadge.style.display      = 'none';
+    statusText.textContent = 'Connect your Google Fit account to let real activity data auto-adjust your daily water goal.';
+    return;
+  }
+
+  connectBtn.style.display    = 'none';
+  disconnectBtn.style.display = '';
+  syncBtn.style.display       = '';
+  statsSection.style.display  = '';
+  fitBadge.style.display      = '';
+  statusText.textContent      = `Google Fit is connected and actively boosting your hydration goal.`;
+
+  // Stat cards
+  document.getElementById('fitSteps').textContent       = (d.steps || 0).toLocaleString();
+  document.getElementById('fitActiveMin').textContent   = d.activeMinutes || 0;
+  document.getElementById('fitCalories').textContent    = (d.caloriesBurned || 0).toLocaleString();
+  document.getElementById('fitHeartRate').textContent   = d.heartRate > 0 ? d.heartRate : '—';
+  document.getElementById('fitTotalBonus').textContent  = `+${d.fitBonus || 0} ml`;
+  document.getElementById('fitNewGoal').textContent     = d.newGoal ? `${d.newGoal} ml` : '—';
+
+  if (d.lastSynced) {
+    document.getElementById('fitLastSync').textContent = `Last synced: ${new Date(d.lastSynced).toLocaleTimeString()}`;
+  }
+
+  // Breakdown rows
+  const bd = d.breakdown || {};
+  const rows = [
+    { icon:'👟', label:'Steps Bonus',         val: bd.stepBonus  || 0, color:'#4285f4' },
+    { icon:'⚡', label:'Active Minutes Bonus', val: bd.activeBonus || 0, color:'#34a853' },
+    { icon:'🔥', label:'Calories Bonus',       val: bd.calBonus    || 0, color:'#fbbc05' },
+  ];
+  document.getElementById('fitBreakdownRows').innerHTML = rows.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,0.15);border-radius:10px">
+      <span style="font-size:0.85rem">${r.icon} ${r.label}</span>
+      <span style="font-family:'Syne',sans-serif;font-weight:700;color:${r.color}">+${r.val} ml</span>
+    </div>`).join('');
+
+  // Steps doughnut chart
+  const steps   = d.steps || 0;
+  const stepsGoal = 10000;
+  const stepsData = [Math.min(steps, stepsGoal), Math.max(0, stepsGoal - steps)];
+  document.getElementById('fitStepsGoal').textContent = `Goal: ${stepsGoal.toLocaleString()} · ${Math.min(100, Math.round(steps/stepsGoal*100))}%`;
+
+  if (stepsChartInstance) stepsChartInstance.destroy();
+  const ctx = document.getElementById('stepsChart').getContext('2d');
+  stepsChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      datasets: [{ data: stepsData, backgroundColor: ['#4285f4','rgba(0,0,0,0.1)'], borderWidth: 0, borderRadius: 4 }]
+    },
+    options: {
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    }
+  });
+}
+
+async function loadGoogleFit() {
+  try {
+    const r = await authFetch('/googlefit/today');
+    const d = await r.json();
+    renderFitUI(d);
+  } catch(e) { renderFitUI(null); }
+}
+
+// Handle OAuth redirect hash
+(function checkFitRedirect() {
+  if (window.location.hash === '#fit-connected') {
+    history.replaceState(null, '', window.location.pathname);
+    setTimeout(() => { showPage('googlefit'); toast('Google Fit connected! 🎉', '✅'); loadGoogleFit(); }, 500);
+  } else if (window.location.hash === '#fit-error') {
+    history.replaceState(null, '', window.location.pathname);
+    toast('Google Fit connection failed. Check your credentials.', '❌');
+  }
+})();
+
+// ── Init ──────────────────────────────────────────────────────────────────
+
+// ── Weather ───────────────────────────────────────────────────────────────
+async function loadWeather() {
+  try {
+    const r = await authFetch('/weather');
+    if (!r.ok) return;  // silently fail — weather chip already shows from today endpoint
+    const d = await r.json();
+    if (!d || d.temperature === undefined) return;
+
+    const icon = d.temperature >= 35 ? '🌡️🔥' : d.temperature >= 25 ? '☀️' : '🌤️';
+    document.getElementById('w-chip-temp').textContent = `${icon} ${Math.round(d.temperature)}°C`;
+    document.getElementById('w-chip-hum').textContent  = `💧 ${d.humidity}%`;
+    document.getElementById('w-chip-city').textContent = `📍 ${d.city || 'Unknown'}`;
+  } catch(e) { /* Weather is non-critical; chip stays with goalService data */ }
+}
+
+function initUI() {
+  const u = USER;
+  if (u?.name) {
+    document.getElementById('userName').textContent = u.name;
+    document.getElementById('userEmail').textContent = u.email;
+    document.getElementById('userAvatar').textContent = u.name.charAt(0).toUpperCase();
+  }
+  loadDashboard();
+  loadWeather();
+  loadUnreadBadge();
+  updateEstimate();
+  loadGoogleFit();
+  // Poll every 10s for dashboard; weather every 10 min
+  setInterval(loadDashboard, 10000);
+  setInterval(loadWeather, 600000);
+  setInterval(loadUnreadBadge, 60000);
+  setInterval(loadGoogleFit, 120000);
+}
+
+initUI();
+
+// ── ESP32 Sensor Live Polling ─────────────────────────────────────────────
+
+let esp32IP = localStorage.getItem('hs_esp32_ip') || '';
+let lastSensorWeight = -1;   // -1 = not yet initialized
+let sensorPollTimer  = null;
+let sensorPostInProgress = false;
+
+function getSensorURL() {
+  return esp32IP ? `http://${esp32IP}/weight` : null;
+}
+
+async function pollESP32() {
+  const url = getSensorURL();
+  if (!url) return;
+
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const d = await r.json();
+    const weight = parseInt(d.weight ?? 0);
+    if (isNaN(weight) || weight < 0) return;
+
+    const BOTTLE_CAP = parseInt(localStorage.getItem('hs_bottle_cap') || '500');
+
+    // ── 1. Always update bottle visual immediately ──────────────────────
+    const pct = Math.min(100, Math.round((weight / BOTTLE_CAP) * 100));
+    document.getElementById('bottleFill').style.height = pct + '%';
+    document.getElementById('bottlePct').textContent   = pct + '%';
+    document.getElementById('bottleMl').textContent    = weight + 'ml / ' + BOTTLE_CAP + 'ml';
+    document.getElementById('remainingInBottle').textContent = weight + 'ml left in bottle';
+    document.getElementById('sensorDot').style.background = 'var(--success)';
+    document.getElementById('sensorStatus').textContent   = 'LIVE';
+    document.querySelector('.sensor-chip')?.classList.add('is-live');
+
+    // ── 2. On first reading, initialise from backend value ─────────────
+    if (lastSensorWeight < 0) {
+      // Use backend's stored bottle level as the true baseline
+      lastSensorWeight = weight;
+      return;
+    }
+
+    const diff = lastSensorWeight - weight;   // positive = water drunk
+
+    // ── 3. Water consumed (level dropped ≥ 20 ml) ──────────────────────
+    //       Post to backend — backend accumulates; NEVER decreases consumed.
+    if (diff >= 20 && !sensorPostInProgress) {
+      sensorPostInProgress = true;
+      try {
+        const resp = await fetch(`${API}/hydration/sensor`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // Send current level; backend computes diff vs its stored lastBottleWeight
+          body: JSON.stringify({
+            userId:    USER._id,
+            amount:    weight,
+            bottleCap: BOTTLE_CAP
+          })
+        });
+        if (resp.ok) {
+          // Refresh dashboard so consumed / progress bars come from server
+          // (server-side value is always additive — today's progress cannot go down)
+          lastSensorWeight = weight;
+          await loadDashboard();
+        }
+      } catch(postErr) {
+        console.warn('Sensor POST failed:', postErr.message);
+      } finally {
+        sensorPostInProgress = false;
+      }
+      return;
+    }
+
+    // ── 4. Bottle refilled (level rose ≥ 50 ml) ────────────────────────
+    //       Update baseline but do NOT add anything to consumed / goal.
+    if (diff <= -50) {
+      lastSensorWeight = weight;
+      toast('💧 Bottle refill detected!', '🔄');
+      return;
+    }
+
+    // ── 5. Small fluctuation — just update baseline ─────────────────────
+    lastSensorWeight = weight;
+
+  } catch(e) {
+    // Can't reach ESP32 — mark offline
+    document.getElementById('sensorDot').style.background = 'var(--muted)';
+    document.getElementById('sensorStatus').textContent   = 'Offline';
+    document.querySelector('.sensor-chip')?.classList.remove('is-live');
+  }
+}
+
+function startSensorPolling() {
+  if (sensorPollTimer) clearInterval(sensorPollTimer);
+  pollESP32();
+  sensorPollTimer = setInterval(pollESP32, 3000);   // every 3 seconds
+}
+
+function saveESP32Config() {
+  const ip  = document.getElementById('esp32IpInput').value.trim();
+  const cap = parseInt(document.getElementById('bottleCapInput').value) || 500;
+  esp32IP = ip;
+  localStorage.setItem('hs_esp32_ip', ip);
+  localStorage.setItem('hs_bottle_cap', cap);
+
+  // Reset sensor baseline so it re-learns from next poll
+  lastSensorWeight = -1;
+
+  // Sync bottle capacity with backend
+  authFetch('/hydration/calibrate', {
+    method: 'POST',
+    body: JSON.stringify({ emptyWeight: 0, fullWeight: cap })
+  }).catch(() => {});  // best-effort
+
+  startSensorPolling();
+  toast(`Device settings saved! IP: ${ip || 'none'}, Cap: ${cap}ml`, '💡');
+  loadDashboard();
+}
+
+// Start polling if IP already configured
+if (esp32IP) startSensorPolling();
+
+// ── HydroBot AI ───────────────────────────────────────────────────────────
+let botOpen = false;
+let botHistory = [];
+
+function toggleBot() {
+  botOpen = !botOpen;
+  document.getElementById('botModal').classList.toggle('open', botOpen);
+  if (botOpen) setTimeout(() => document.getElementById('botInput').focus(), 150);
+}
+
+function botSuggest(btn) {
+  document.getElementById('botInput').value = btn.textContent;
+  sendBotMessage();
+}
+
+function addBotMsg(text, who) {
+  const el = document.getElementById('botMessages');
+  const d = document.createElement('div');
+  d.className = 'bot-msg ' + who;
+  d.innerHTML = text.replace(/\n/g, '<br>');
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  return d;
+}
+
+function showBotTyping() {
+  const el = document.getElementById('botMessages');
+  const d = document.createElement('div');
+  d.className = 'bot-msg bot bot-typing';
+  d.id = 'botTyping';
+  d.innerHTML = '<span></span><span></span><span></span>';
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+function removeBotTyping() {
+  document.getElementById('botTyping')?.remove();
+}
+
+async function sendBotMessage() {
+  const input = document.getElementById('botInput');
+  const text  = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addBotMsg(text, 'user');
+  botHistory.push({ role: 'user', content: text });
+
+  // Hide suggestions after first message
+  document.getElementById('botSuggestions').style.display = 'none';
+
+  showBotTyping();
+  document.getElementById('botStatus').textContent = 'HydroBot is thinking…';
+
+  try {
+    const r = await fetch('/api/bot/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('hs_token') },
+      body: JSON.stringify({ message: text, history: botHistory.slice(-10) })
+    });
+    const d = await r.json();
+    removeBotTyping();
+
+    const reply = d.reply || 'Sorry, I could not get a response. Please try again.';
+    addBotMsg(reply, 'bot');
+    botHistory.push({ role: 'assistant', content: reply });
+    document.getElementById('botStatus').textContent = 'Ask me anything about your hydration';
+
+  } catch(e) {
+    removeBotTyping();
+    addBotMsg('⚠️ Could not connect to HydroBot. Make sure your backend is running.', 'bot');
+    document.getElementById('botStatus').textContent = 'Offline';
+  }
+}
+
+function toggleBot() {
+  const modal = document.getElementById("botModal");
+  modal.style.display = modal.style.display === "flex" ? "none" : "flex";
+}
+
+</script>
+
+<!-- ── HydroBot AI ─────────────────────────────────────────────────────── -->
+<button class="bot-fab" onclick="toggleBot()" title="HydroBot — Ask me anything!">💧</button>
+
+<div class="bot-modal" id="botModal">
+  <div class="bot-header">
+    <div class="bot-avatar">💧</div>
+    <div class="bot-header-info">
+      <div class="bot-header-name">HydroBot</div>
+      <div class="bot-header-sub" id="botStatus">Ask me anything about your hydration</div>
+    </div>
+    <button class="bot-close" onclick="toggleBot()">✕</button>
+  </div>
+  <div class="bot-messages" id="botMessages">
+    <div class="bot-msg bot">👋 Hi! I'm HydroBot, your personal hydration assistant.<br><br>I can help with your daily goals, sensor setup, activity tracking, health tips, and how to use HydroSync. What would you like to know?</div>
+  </div>
+  <div class="bot-suggestions" id="botSuggestions">
+    <button class="bot-sug-btn" onclick="botSuggest(this)">How is my goal calculated?</button>
+    <button class="bot-sug-btn" onclick="botSuggest(this)">Why is my sensor reading 0?</button>
+    <button class="bot-sug-btn" onclick="botSuggest(this)">How to log water manually?</button>
+    <button class="bot-sug-btn" onclick="botSuggest(this)">What counts as hydration?</button>
+  </div>
+  <div class="bot-input-row">
+    <input class="bot-input" id="botInput" placeholder="Ask HydroBot…" onkeydown="if(event.key==='Enter')sendBotMessage()"/>
+    <button class="bot-send" onclick="sendBotMessage()">➤</button>
+  </div>
+</div>
+
+</body>
+</html>

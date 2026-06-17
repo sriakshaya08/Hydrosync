@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HydroSense — Smart Water Bottle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    :root {
+      --bg: #04111c;
+      --bg2: #071a28;
+      --surface: #0a2035;
+      --surface2: #0d2840;
+      --border: rgba(0,210,210,0.12);
+      --accent: #00d2d2;
+      --accent2: #00aaff;
+      --accent-glow: rgba(0,210,210,0.25);
+      --text: #e8f4f8;
+      --text-muted: #7ba8c0;
+      --danger: #ff5a6e;
+      --success: #00e0a0;
+      --warn: #ffb830;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 16px;
+      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Animated water background */
+    .bg-canvas { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+    .bg-canvas::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 15% 80%, rgba(0,80,120,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 20%, rgba(0,170,255,0.15) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(0,210,210,0.07) 0%, transparent 70%);
+    }
+    .wave { position: absolute; bottom: -20px; left: 0; width: 200%; height: 220px; opacity: 0.06; }
+    .wave svg { width: 100%; height: 100%; }
+    .wave1 { animation: wave-move 8s ease-in-out infinite; }
+    .wave2 { animation: wave-move 12s ease-in-out infinite reverse; opacity: 0.04; bottom: -40px; }
+    @keyframes wave-move { 0%,100% { transform: translateX(0); } 50% { transform: translateX(-25%); } }
+
+    .floating-drop {
+      position: absolute;
+      width: 8px; height: 11px;
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      background: var(--accent);
+      opacity: 0;
+      animation: float-up 6s ease-in infinite;
+    }
+    @keyframes float-up {
+      0% { opacity: 0; transform: translateY(100vh) scale(0.5); }
+      20% { opacity: 0.4; }
+      80% { opacity: 0.2; }
+      100% { opacity: 0; transform: translateY(-10vh) scale(1.2); }
+    }
+
+    /* Auth container */
+    .auth-wrap {
+      position: relative; z-index: 10;
+      width: 100%; max-width: 460px;
+      padding: 20px;
+    }
+
+    .logo-area {
+      text-align: center;
+      margin-bottom: 36px;
+      animation: fade-down 0.6s ease both;
+    }
+    .logo-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 20px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      margin-bottom: 16px;
+      box-shadow: 0 0 30px var(--accent-glow), 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .logo-title {
+      font-family: var(--font-head);
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo-sub { color: var(--text-muted); font-size: 14px; margin-top: 4px; font-weight: 300; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
+      animation: fade-up 0.5s ease 0.1s both;
+    }
+
+    .tab-row {
+      display: flex; gap: 4px;
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px;
+      font-family: var(--font-body);
+      font-size: 14px; font-weight: 500;
+      border: none; border-radius: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-muted);
+      background: transparent;
+    }
+    .tab-btn.active {
+      background: var(--surface2);
+      color: var(--accent);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block;
+      font-size: 12px; font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .form-group input, .form-group select {
+      width: 100%; padding: 13px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      transition: var(--transition);
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .form-group input::placeholder { color: rgba(123,168,192,0.4); }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .conditions-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-top: 4px;
+    }
+    .cond-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 13px;
+    }
+    .cond-item:hover { border-color: rgba(0,210,210,0.3); }
+    .cond-item input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
+    .cond-item.checked { border-color: var(--accent); background: rgba(0,210,210,0.06); }
+
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--accent);
+      margin: 22px 0 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      border: none; border-radius: 14px;
+      color: #04111c;
+      font-family: var(--font-head);
+      font-size: 16px; font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-top: 8px;
+      box-shadow: 0 4px 20px rgba(0,210,210,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,210,210,0.4); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .error-msg {
+      background: rgba(255,90,110,0.1);
+      border: 1px solid rgba(255,90,110,0.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px; color: var(--danger);
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error-msg.show { display: block; animation: shake 0.3s ease; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+    .progress-bar-mini {
+      height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 20px; overflow: hidden;
+    }
+    .progress-bar-mini-fill {
+      height: 100%; width: 0%; border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.3s ease;
+    }
+
+    /* Register extra fields shown/hidden */
+    #register-extra { display: none; }
+
+    @keyframes fade-up { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fade-down { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+  <div class="bg-canvas">
+    <div class="wave wave1">
+      <svg viewBox="0 0 1440 220" preserveAspectRatio="none">
+        <path fill="#00d2d2" d="M0,80 C360,160 720,0 1080,80 C1260,120 1380,60 1440,80 L1440,220 L0,220 Z"/>
+      </svg>
+    </div>
+    <div class="wave wave2">
+      <svg viewBox="0 0 1440 220" preserveAspectRatio="none">
+        <path fill="#00aaff" d="M0,100 C240,40 480,160 720,100 C960,40 1200,140 1440,100 L1440,220 L0,220 Z"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="auth-wrap">
+    <div class="logo-area">
+      <div class="logo-icon">💧</div>
+      <div class="logo-title">HydroSense</div>
+      <div class="logo-sub">AI-powered smart hydration tracking</div>
+    </div>
+
+    <div class="card">
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn" onclick="switchTab('register')">Create Account</button>
+      </div>
+
+      <div class="progress-bar-mini"><div class="progress-bar-mini-fill" id="form-progress"></div></div>
+      <div class="error-msg" id="error-msg"></div>
+
+      <!-- LOGIN FORM -->
+      <div id="login-form">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In →</button>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="register-form" style="display:none">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="reg-name" placeholder="Alex Johnson" />
+        </div>
+        <div class="row-2">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="reg-email" placeholder="you@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="reg-pass" placeholder="Min 6 chars" />
+          </div>
+        </div>
+
+        <div class="section-label">Physical Profile</div>
+        <div class="row-2">
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" id="reg-age" placeholder="25" min="5" max="100" />
+          </div>
+          <div class="form-group">
+            <label>Gender</label>
+            <select id="reg-gender">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" id="reg-weight" placeholder="70" min="20" max="300" />
+          </div>
+          <div class="form-group">
+            <label>Height (cm)</label>
+            <input type="number" id="reg-height" placeholder="170" min="100" max="250" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Activity Level</label>
+          <select id="reg-activity">
+            <option value="sedentary">Sedentary (desk job, minimal exercise)</option>
+            <option value="light">Light (1-3 days/week exercise)</option>
+            <option value="moderate" selected>Moderate (3-5 days/week)</option>
+            <option value="active">Active (6-7 days/week)</option>
+            <option value="very_active">Very Active (athlete / physical job)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>City (for weather-based goals)</label>
+          <input type="text" id="reg-city" placeholder="Chennai" />
+        </div>
+
+        <div class="section-label">Health Conditions (optional)</div>
+        <div class="conditions-grid" id="conditions-grid">
+          <label class="cond-item"><input type="checkbox" value="kidneyStones" onchange="toggleCond(this)"> 🫘 Kidney Stones</label>
+          <label class="cond-item"><input type="checkbox" value="diabetes" onchange="toggleCond(this)"> 🩺 Diabetes</label>
+          <label class="cond-item"><input type="checkbox" value="hypertension" onchange="toggleCond(this)"> 💓 Hypertension</label>
+          <label class="cond-item"><input type="checkbox" value="uti" onchange="toggleCond(this)"> 🦠 UTI (recurring)</label>
+          <label class="cond-item"><input type="checkbox" value="pregnant" onchange="toggleCond(this)"> 🤰 Pregnant</label>
+          <label class="cond-item"><input type="checkbox" value="breastfeeding" onchange="toggleCond(this)"> 👶 Breastfeeding</label>
+          <label class="cond-item"><input type="checkbox" value="heartDisease" onchange="toggleCond(this)"> ❤️ Heart Disease</label>
+        </div>
+
+        <button class="btn-primary" id="reg-btn" onclick="doRegister()" style="margin-top:24px">Create Account →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:5000/api';
+    let activeTab = 'login';
+
+    // Generate floating drops
+    for (let i = 0; i < 15; i++) {
+      const d = document.createElement('div');
+      d.className = 'floating-drop';
+      d.style.left = Math.random() * 100 + 'vw';
+      d.style.animationDelay = (Math.random() * 8) + 's';
+      d.style.animationDuration = (4 + Math.random() * 6) + 's';
+      d.style.width = (5 + Math.random() * 8) + 'px';
+      d.style.height = (7 + Math.random() * 10) + 'px';
+      document.querySelector('.bg-canvas').appendChild(d);
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+      document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+      });
+      hideError();
+    }
+
+    function toggleCond(el) {
+      el.closest('.cond-item').classList.toggle('checked', el.checked);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg; el.classList.add('show');
+    }
+    function hideError() {
+      document.getElementById('error-msg').classList.remove('show');
+    }
+    function setProgress(pct) {
+      document.getElementById('form-progress').style.width = pct + '%';
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const pass = document.getElementById('login-pass').value;
+      if (!email || !pass) return showError('Please enter email and password.');
+      hideError(); setProgress(40);
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true; btn.textContent = 'Signing in...';
+
+      try {
+        const r = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pass })
+        });
+        const data = await r.json();
+        if (!r.ok) { showError(data.message || 'Login failed'); setProgress(0); btn.disabled = false; btn.textContent = 'Sign In →'; return; }
+        setProgress(100);
+        localStorage.setItem('hs_token', data.token);
+        localStorage.setItem('hs_user', JSON.stringify(data.user));
+        window.location.href = 'dashboard.html';
+      } catch (e) {
+        showError('Server unreachable. Check your connection.');
+        setProgress(0); btn.disabled = false; btn.textContent = 'Sign In →';
+      }
+    }
+
+    async function doRegister() {
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-pass').value;
+      const age = parseInt(document.getElementById('reg-age').value) || 25;
+      const gender = document.getElementById('reg-gender').value;
+      const weight = parseFloat(document.getElementById('reg-weight').value) || 70;
+      const height = parseFloat(document.getElementById('reg-height').value) || 170;
+      const activityLevel = document.getElementById('reg-activity').value;
+      const city = document.getElementById('reg-city').value.trim() || 'Chennai';
+
+      if (!name || !email || !password) return showError('Name, email and password are required.');
+      if (password.length < 6) return showError('Password must be at least 6 characters.');
+
+      const conditions = {};
+      document.querySelectorAll('#conditions-grid input[type="checkbox"]').forEach(cb => {
+        if (cb.checked) conditions[cb.value] = true;
+      });
+
+      hideError(); setProgress(40);
+      const btn = document.getElementById('reg-btn');
+      btn.disabled = true; btn.textContent = 'Creating account...';
+
+      try {
+        const r = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, email, password,
+            profile: { age, gender, weight, height, activityLevel },
+            healthConditions: conditions,
+            location: { city, country: 'IN' }
+          })
+        });
+        const data = await r.json();
+        if (!r.ok) { showError(data.message || 'Registration failed'); setProgress(0); btn.disabled = false; btn.textContent = 'Create Account →'; return; }
+        setProgress(100);
+        localStorage.setItem('hs_token', data.token);
+        localStorage.setItem('hs_user', JSON.stringify(data.user));
+        window.location.href = 'dashboard.html';
+      } catch (e) {
+        showError('Server unreachable. Check your connection.');
+        setProgress(0); btn.disabled = false; btn.textContent = 'Create Account →';
+      }
+    }
+
+    // Redirect if already logged in
+    if (localStorage.getItem('hs_token')) window.location.href = 'dashboard.html';
+  </script>
+</body>
+</html>
